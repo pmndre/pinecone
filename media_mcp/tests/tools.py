@@ -56,6 +56,14 @@ async def main():
     check("first and list", server.value_of({"first": ["$none", "$s"]}, env) == "x" and server.value_of({"list": ["$s", "$items", "$none"]}, env) == ["x", "p", "q"])
     check("pick is the same for the same seed", server.value_of({"pick": list("abcdef")}, {"seed": 5}) == server.value_of({"pick": list("abcdef")}, {"seed": 5}))
     check("when: equal, in, given", server.applies({"s": "x", "a": {"in": [1, 2]}, "none": {"given": False}, "t": True}, env) and not server.applies({"none": {"given": True}}, env))
+    two = {"name": "x", "description": "d", "service": "one", "params": {"small": {"type": "boolean", "default": False}},
+           "run": {"post": "/p"}, "variants": [{"when": {"small": True}, "service": "other"}]}
+    server.check_tool(two, f)
+    check("a variant can go to a service of its own", (await server.plan(two, f, {"small": True}, None, []))["service"] == "other"
+          and (await server.plan(two, f, {}, None, []))["service"] == "one")
+    try: server.check_tool({k: v for k, v in two.items() if k != "service"}, f); caught = False
+    except ValueError as e: caught = '"service" is missing' in str(e)
+    check("a tool still needs a service for the calls no variant takes", caught)
     bad = {"name": "x", "description": "d", "service": "comfy", "run": {"post": "/p", "json": {"a": "$nope"}}}
     try: server.check_tool(bad, f); caught = False
     except ValueError as e: caught = "$nope" in str(e)

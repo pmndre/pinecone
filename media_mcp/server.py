@@ -502,11 +502,12 @@ def check_tool(spec, path):
         if p.get("type") not in PY_TYPES:
             raise ValueError(f'{n}: "type" must be one of {", ".join(PY_TYPES)}')
     runs = [spec["run"]] + [v["run"] for v in spec.get("variants", []) if "run" in v]
-    for run in runs:
+    for v in [{}] + spec.get("variants", []):  # a variant may bring its own "run" and its own "service"
+        run, service = v.get("run", spec["run"]), v.get("service", spec.get("service"))
         kind = next((k for k in ("comfy", "post", "python") if k in run), None)
         if kind is None:
             raise ValueError('"run" needs "comfy" (a workflow file), "post" (a path on the service) or "python" (file:function)')
-        if kind != "python" and "service" not in spec:
+        if kind != "python" and not service:
             raise ValueError('"service" is missing: the name of the service in the scheduler config')
         if kind == "comfy" and isinstance(run["comfy"], str) and not (path.parent / run["comfy"]).is_file():
             raise ValueError(f'no workflow file {run["comfy"]} next to the config file')
@@ -562,7 +563,7 @@ async def plan(spec, path, args, ctx, staged):
     for name, s in {**spec.get("values", {}), **variant.get("values", {})}.items():
         env[name] = value_of(s, env)
     run = variant.get("run", spec["run"])
-    out = {"env": env, "result": variant.get("result", spec.get("result", {})), "service": spec.get("service")}
+    out = {"env": env, "result": variant.get("result", spec.get("result", {})), "service": variant.get("service", spec.get("service"))}
     if "comfy" in run:
         graph = workflow(run, path)
         merge(graph, variant.get("patch", {}))

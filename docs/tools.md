@@ -103,7 +103,9 @@ read as a template. A name that does not exist is found when the config is saved
 
 **`variants`** are for a tool that works in more than one way. The first one whose `when` holds is used; it
 can replace `run` and `result`, add or replace `values`, and `patch` the workflow. In `when`, each entry
-names a parameter and what it must be: a value, `{"in": [...]}`, or `{"given": true}`.
+names a parameter and what it must be: a value, `{"in": [...]}`, or `{"given": true}`. A variant can also
+name a `service` of its own, for a tool that more than one server can answer: a small, fast model for the
+plain case and a larger one for the rest. The lease is then taken on that service, so only it is loaded.
 
     "variants": [{"when": {"fast": true}, "patch": {"sample": {"inputs": {"steps": 8}}}}]
 
