@@ -79,6 +79,8 @@ async def main():
     for f in (old, new, foreign): f.write_bytes(b"x")
     for f in (old, foreign): os.utime(f, (time.time() - 30 * 86400,) * 2)
     check("old results are deleted, new ones and other people's files stay", server.sweep() == 1 and not old.exists() and new.exists() and foreign.exists())
+    path, _, query = server.signed("/files/a.png", 2.5 * 86400).partition("?")
+    check("a link that lasts part of a week is still a good link", server.signature_ok(path, query) and not server.signature_ok(path, query.replace("sig=", "sig=0")), query[:24])
     server.COMFY_OUT = HOME / "out"; (HOME / "out" / "mcp").mkdir(parents=True); (HOME / "out" / "mcp" / "a.png").write_bytes(b"x")
     server.drop_comfy_copy({"filename": "a.png", "subfolder": "mcp", "type": "output"}); server.drop_comfy_copy({"filename": "config.json", "subfolder": "..", "type": "output"})
     check("ComfyUI's copy of a result is removed, and nothing outside its folder", not (HOME / "out" / "mcp" / "a.png").exists() and f.exists() and (HOME / "config.json").exists())

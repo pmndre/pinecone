@@ -112,7 +112,7 @@ SIGNING_KEY = hashlib.sha256(b"pinecone file links:" + KEY.encode()).digest()
 
 
 def signed(path, seconds):
-    exp = int(time.time()) + seconds
+    exp = int(time.time() + seconds)  # a whole number, also when keep_days is not one: signature_ok takes nothing else
     sig = hmac.new(SIGNING_KEY, f"{path}:{exp}".encode(), "sha256").hexdigest()[:40]
     return f"{path}?exp={exp}&sig={sig}"
 
@@ -386,7 +386,7 @@ def preview(data):
 # ---- tools made from the config ----------------------------------------
 # Each entry under "tools" in the config file describes one tool: its parameters, how the values for the
 # request are worked out, the request itself (a ComfyUI workflow, an HTTP call to a service, or a Python
-# function), and what to do with the result. README.md has the format. Nothing below knows any particular tool.
+# function), and what to do with the result. docs/tools.md has the format. Nothing below knows any particular tool.
 VAR = re.compile(r"\$(?:\$|\{(\w+)\}|(\w+))")
 FILE_NOTE = (" Give the `file` name from an earlier answer of this server, or an http(s) link. A file on your own "
              "computer has to be sent here first, with put_file or upload_link; then pass the name you got.")
