@@ -6,19 +6,20 @@ Everything in `~/.pinecone/config.json` that concerns the scheduler. The media s
 
 `~/.pinecone/config.json` is read when the scheduler starts and again whenever it is saved, so changes need
 no restart. Nothing that is loaded gets interrupted: a changed start command applies the next time that
-model loads, and a removed model is stopped once it is idle. A file with a mistake is ignored and the
+model loads, and a removed model is stopped once it is idle. Only `listen`, `api_key_file` and `tokens_file`
+wait for the scheduler to be started again. A file with a mistake is ignored and the
 mistake is shown in the app (and in `/scheduler/status`); the last good version stays in use.
 
 | Setting | Meaning | If left out |
 |---|---|---|
-| `system_reserve_gb` | Memory kept free for macOS and your apps. Models and services share the rest. | required |
+| `system_reserve_gb` | Memory kept free for macOS and your apps, from 4 GB to half of what the Mac has. Models and services share the rest. | required |
 | `resources` | The models and services, by name. See below. | required |
 | `listen` | `{"host", "port"}` the scheduler listens on. Use host `0.0.0.0` to reach it from other devices. | `127.0.0.1`, `8080` |
 | `public_url` | The address other devices use for the scheduler, shown under Endpoints in the app. | this Mac's network name when `listen` is `0.0.0.0`, else the address the app itself uses |
 | `starvation_after_s` | A request that has waited this long gets the next turn. | `1800` |
 | `manage_gpu_limit` | `false`: do not touch the GPU memory limit (see Memory). | `true` |
 | `api_key_file`, `tokens_file` | Where the scheduler's own key and the token list are kept. | next to the config |
-| `media`, `tools` | The media server's settings and its tools. See The media server. | none |
+| `media`, `tools` | The media server's settings and its tools. See [Media tools](tools.md). | none |
 
 Each entry in `resources` is one server the scheduler may start. Its name is what clients send as `"model"`.
 
@@ -35,7 +36,8 @@ Each entry in `resources` is one server the scheduler may start. Its name is wha
 | `keep_alive_s` | How long it stays loaded after its last request even when something else wants the memory. | `300` |
 | `min_residency_s` | How long it stays loaded at least, once started. | `60` |
 | `idle_stop_s` | Stop it after this long without work, even if nothing else needs the memory. | never |
-| `keep_cache` | For a llama.cpp server: write what its slots have read to disk before it is stopped, and read it back when it has started again. Without it, the first message of every conversation after a reload is read from its first word. The files are in `cache/<name>/` next to the config, one per slot, and can be several GB each. The server is started with that folder as its `--slot-save-path`, so a client can keep slot files of its own there too (pine does, for conversations beyond the server's slots: `pine-*.bin`); the scheduler writes and removes only its own `slot-*.bin`. | `false` |
+| `keep_cache` | For a llama.cpp server: write what its slots have read to disk before it is stopped, and read it back when it has started again. Without it, the first message of every conversation after a reload is read from its first word. The files are in `cache/<name>/` next to the config, one per slot, and can be several GB each. The server is started with that folder as its `--slot-save-path`, so a client can keep slot files of its own there too (pine does, for conversations beyond the server's slots: `pine-*.bin`); the scheduler writes and removes only its own `slot-*.bin`. The slots are also written when the scheduler itself stops. They are read back once, and only by a server started with the same `cmd`. | `false` |
+| `keep_cache_timeout_s` | How long one slot may take to be written or read back. | `120` |
 
 `cmd` is all the scheduler knows about a server. It runs the command, waits for `health` to answer on
 `port`, and sends requests there. To unload, it ends the process it started (and force-quits it if it has
@@ -43,8 +45,9 @@ not gone after 30 seconds). There is no stop command to write.
 
 ## Variables
 
-Paths and addresses that belong to your Mac go into a `.env` file, not into the config. A config value can
-use them as `$NAME` or `${NAME}`; `$$` is a dollar sign. This is the same notation pine uses.
+Paths and addresses that belong to your Mac go into a `.env` file, not into the config. `cmd`, `cwd`,
+`public_url`, the two key files and everything under `"media"` can use them as `$NAME` or `${NAME}`;
+`$$` is a dollar sign. This is the same notation pine uses.
 
     # .env
     MODELS=/Volumes/Fast/models
@@ -59,7 +62,7 @@ port), `$CONFIG_DIR` (the folder of the config file) and `$PYTHON` (the Python t
 
 - A model that is working is never stopped.
 - An idle one is stopped when a request for something else does not fit next to it; the one unused longest goes first.
-- Requests wait while their model loads. Streaming clients get a comment line every few seconds meanwhile.
+- Requests wait while their model loads. Streaming clients get a comment line every ten seconds meanwhile.
 - A request that has waited longer than `starvation_after_s` gets the next turn: nothing new is given to the models in its way.
 
 ## Memory
@@ -73,4 +76,4 @@ app, run `sudo scheduler/install-gpu-limit.sh` (`... remove` undoes it). It inst
 can do nothing but set this one limit.
 
 `memory_budget_gb` can be given in place of `system_reserve_gb` to plan with a fixed amount; the GPU limit
-is then left alone. The tests use it.
+is then left alone. The tests use it. With both in the file, `system_reserve_gb` is the one that counts.

@@ -21,21 +21,23 @@ the way of something else, and you end up starting and stopping servers by hand.
 
 ### What Pinecone does
 
-- **You say what the system keeps, not what a model gets.** And by default it pins the OS to a bare minimum and raises the Mac's GPU memory limit to match. Everything else belongs to models.
+- **You say what the system keeps, not what a model gets.** Everything else belongs to models, and Pinecone raises the Mac's GPU memory limit to match.
 - **It loads and unloads for you.** A request for a model that is not in memory starts it. If it does not fit,
   whatever is idle goes first. A request waits while that happens; nothing that is working is ever stopped.
 - **It is made for tight machines.** One large model that needs the whole Mac, or a bundle of smaller ones
-  side by side, or both in turn: the space you gave it is never exceeded.
-- **Services become MCP tools automatically.** Image gen, music and speech servers are not chat models, so Pinecone wraps them into
-  a MCP server that describes what they can do. You give this URL to your agent and it will be able to handle all your assets.
-- **Pair it to Tailscale.** Now you can safely share your inference. Clients meed to authentificate against it of course.
+  side by side, or both in turn: it never plans more than the space you gave it.
+- **Services become MCP tools.** Image gen, music and speech servers are not chat models, so Pinecone wraps them into
+  an MCP server that describes what they can do. A tool is a few lines in the config, not code. You give this URL to your agent and it will be able to handle all your assets.
+- **Pair it with Tailscale.** Now you can safely share your inference with your other devices. Every client needs an access token, which you make in the app.
 
 That leaves a client with two addresses, both shown in the menu bar app:
 
 | Endpoint | For |
 |---|---|
-| `http://your-mac:8080/v1` | Models, as an OpenAI-compatible API. The `model` in a request picks one. |
-| `http://your-mac:8090/mcp` | Tools, as an MCP server: make an image, edit a photo, compose music, speak, transcribe. |
+| `http://127.0.0.1:8080/v1` | Models, as an OpenAI-compatible API. The `model` in a request picks one. |
+| `http://127.0.0.1:8090/mcp` | Tools, as an MCP server: make an image, edit a photo, compose music, speak, transcribe. |
+
+These are the addresses on the Mac itself. [Clients](docs/clients.md) says how to let other devices in; the app then shows the addresses to give them.
 
 ### Start
 
@@ -64,6 +66,8 @@ The first start makes `~/.pinecone/config.json`. Put your models in, or hand the
 
 Pinecone downloads no models and brings no inference engine. It runs the servers you already use
 (llama.cpp, ComfyUI, mlx-audio, anything that listens on a port) and decides when to load or unload them.
+They can be anywhere on your Mac. We recommend `~/.pinecone/models` for model files and their server and
+`~/.pinecone/services` for the rest, next to the config, so that a whole setup is in one folder.
 
 ### Documentation
 
@@ -72,3 +76,4 @@ Pinecone downloads no models and brings no inference engine. It runs the servers
 - [Media tools](docs/tools.md): describing tools in the config, and how files travel
 - [Clients](docs/clients.md): our two endpoints, access tokens, pine and other clients
 - [API](docs/api.md) · [The app](docs/app.md) · [Operations](docs/operations.md)
+- [AGENTS.md](AGENTS.md): for coding agents and contributors: what is where, and the conventions

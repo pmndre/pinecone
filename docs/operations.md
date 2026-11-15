@@ -6,7 +6,7 @@ Running it day to day: where to look, what to run after a change, what can go wr
 
 ## Logs
 
-Everything is in `~/.pinecone/logs/`: `scheduler.log`, `media.log`, and one file for each model or service, named after it. A model that fails to start says why in its own log; the app shows the last line of the reason on its row.
+Everything is in `~/.pinecone/logs/`: `scheduler.log`, `media.log`, and one file for each model or service, named after it. A model that fails to start says why in its own log; the app shows the reason on its row. A scheduler or media server started by hand writes to the terminal instead of its log file.
 
 ## Starting and stopping
 
@@ -15,7 +15,9 @@ Everything is in `~/.pinecone/logs/`: `scheduler.log`, `media.log`, and one file
     launchctl kickstart -k gui/$UID/dev.pinecone.scheduler      # restart; stops every loaded model
     launchd/install.sh remove                                    # stop and remove both
 
-A change to the config needs no restart. A restart is for new program code, or a new `listen` address.
+A change to the config needs no restart. A restart is for new program code, a new `listen` address or key
+file, and for the media server's own settings other than `models` and `keep_days`. After moving the program's
+folder, run `launchd/install.sh` again: the services are installed with its path.
 
 ## When something is wrong
 
@@ -25,14 +27,16 @@ A change to the config needs no restart. A restart is for new program code, or a
 | "port … is already in use" | A server from an earlier run is still there (the scheduler was killed). Stop that process, or restart the Mac. |
 | "did not become ready in time" | The model takes longer to load than `start_timeout_s`, or its `health` path is wrong. Its log says more. |
 | A model is very slow | It does not fit and macOS is swapping. Raise its `memory_gb` so less is loaded beside it, or keep more for the system. |
-| "The GPU memory limit could not be set" | The helper is not installed: press "Allow…" in Settings. |
+| "macOS asks for your password once…" in Settings | The helper that sets the GPU memory limit is not installed: press "Allow…". |
+| "The GPU memory limit could not be set" | The helper is there but failed; the reason follows the message. |
+| "… starts without what it had read" in the activity | What `keep_cache` had saved was not read back, for example because the model's `cmd` changed. It begins empty. |
 | A tool is missing from the media server | `curl localhost:8090/health` names it under `tool_errors` with the reason. |
 | An agent cannot play a result | It put the link into its reply without saving the file first. The answer tells it to download; a fresh conversation helps. |
 
 ## Security
 
-- Model servers listen on `127.0.0.1` and have no key. Clients reach them only through the scheduler, which wants a key for every path.
-- Access tokens are stored as hashes. A token can use models, services and tools; it cannot change settings or tokens.
+- Model servers listen on `127.0.0.1` and have no key. Clients reach them only through the scheduler, which wants a key for every path but `/health`.
+- Access tokens are stored as hashes. A token can use models, services and tools; it cannot change settings or tokens. A revoked token can go on working on the media server for up to a minute.
 - File links are signed and end after a week; upload links after an hour. Whoever has such a link can use it, so treat one like the file itself.
 - A caller that arrives through a proxy cannot make a tool read a path on the server or fetch an address that is not public.
 - Expose the media server through a proxy (`tailscale serve`, a reverse proxy with TLS), not by listening on `0.0.0.0`.
@@ -41,10 +45,11 @@ A change to the config needs no restart. A restart is for new program code, or a
 
     .venv/bin/python scheduler/scheduler.py scheduler/tests/config.json &     # stand-in servers, port 18080
     .venv/bin/python scheduler/tests/run.py
-    .venv/bin/python scheduler/tests/reload.py       # these three start their own scheduler
+    kill %1                                          # the next ones start their own scheduler, on the same port
+    .venv/bin/python scheduler/tests/reload.py
     .venv/bin/python scheduler/tests/cache.py
+    .venv/bin/python scheduler/tests/settings.py
     # keep_cache against a real llama.cpp server (not needed for the others): any model file will do, tiny_model.py makes one
     python scheduler/tests/tiny_model.py <llama.cpp checkout> /tmp/tiny.gguf     # needs numpy
     .venv/bin/python scheduler/tests/cache_live.py <llama-server> /tmp/tiny.gguf
-    .venv/bin/python scheduler/tests/settings.py
     .venv/bin/python media_mcp/tests/tools.py        # the tools of the example config, no services needed

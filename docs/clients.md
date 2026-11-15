@@ -10,7 +10,7 @@ Pinecone gives clients two addresses, both shown in the menu bar app with a butt
 
 | Endpoint | What it is | Default |
 |---|---|---|
-| Models | An OpenAI-compatible API. The `model` in a request names an entry of the config; Pinecone loads it if needed. | `http://<this Mac>:8080/v1` |
+| Models | An OpenAI-compatible API. The `model` in a request names an entry of the config; Pinecone loads it if needed. | `http://127.0.0.1:8080/v1`; this Mac's network name once `listen` is `0.0.0.0` |
 | Media tools | An MCP server (streamable HTTP) with one tool for each entry under `"tools"`. | `http://127.0.0.1:8090/mcp` |
 
 Both want `Authorization: Bearer <access token>`.
@@ -23,6 +23,7 @@ Every request needs `Authorization: Bearer <key>`.
   Settings, or with `POST /scheduler/mint {"name": "..."}` and `POST /scheduler/revoke {"id": "..."}`.
   A token can use the models, the leases and the media server. It cannot change settings or tokens.
   Only hashes of the tokens are stored (`tokens.json`), so a token is shown once, when it is made.
+  A revoked token can go on working on the media server for up to a minute.
 - **The scheduler's own key** (`internal-key.txt`) can do everything. It is for the app and for
   tools on the same Mac. `/health` tells callers on the same Mac where that file is, which is how the app
   finds it without being told.
@@ -45,5 +46,5 @@ For the media tools, add the Media address as an MCP server with the header `Aut
 
 A client on another computer shares no disk with the server. A tool that makes a file answers with a link; a tool that takes a file wants it sent first. [Media tools](tools.md#files) has the details. In short:
 
-- **A result:** download the `url` from the answer. It needs no key and works for a week. Do not put the link itself into a chat reply as a picture or sound; save the file, then use the saved copy.
+- **A result:** download the `url` from the answer. It needs no key and works for a week (less if `keep_days` is shorter). Do not put the link itself into a chat reply as a picture or sound; save the file, then use the saved copy.
 - **A file of your own:** call `upload_link` and send the file to the link it gives (`curl -T`), or pass its bytes to `put_file`; then give the tool the name you got back.

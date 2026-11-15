@@ -15,23 +15,29 @@ Pinecone.app shows what the scheduler is doing and holds the settings that are y
   </picture>
 </p>
 
-menubar/build.sh                                   # needs only the Xcode Command Line Tools
+    menubar/build.sh                                   # needs only the Xcode Command Line Tools
     cp -R menubar/build/Pinecone.app /Applications/
 
 The icon is faded while the scheduler is off and shows a dot while something is loading or working. The
 panel lists models and services with their state and memory, a memory bar split by what is loaded, what
 is waiting, CPU, GPU and memory graphs, the endpoints to give to clients (with a button to copy each),
-and recent activity. The switch at the top starts and stops the background services installed by
-`launchd/install.sh`.
+and recent activity. A model or service that is loaded and idle has a button to unload it, and a mistake
+in `config.json` is shown at the top. The switch at the top starts and stops the background services
+installed by `launchd/install.sh`.
 
 Settings hold what is the user's to decide on this Mac: the memory split and whether the scheduler sets the
-GPU memory limit, whether and where other devices reach it, access tokens, and for each model and service
-its planned memory and how long it stays loaded. Save sends what changed to the scheduler, which writes it
-into `config.json` and applies it. What sets a model or a tool up (start commands, paths, ports, model
+GPU memory limit, whether and where other devices reach it and on which port, how long a request waits
+before it goes first, access tokens, for each model and service its planned memory and how long it stays
+loaded, and for the media tools their address for other devices and after how many days results are
+deleted. It also lists the tools, with any that were left out and why, and has "Open at login". Save sends
+what changed to the scheduler, which writes it into `config.json` and applies it; reachability and port
+take effect when the scheduler is started again, the media address when the media server is. What sets a model or a tool up (start commands, paths, ports, model
 files, the tools themselves) is not in Settings: that is edited in the file, by you or by an AI agent.
 
 The app keeps no list of models. Everything it shows comes from `/scheduler/status`. Pointed at a
-scheduler on another Mac (Settings, Scheduler), it asks for an access token and shows status only.
+scheduler on another Mac (Settings, This app, "Watch a scheduler on another Mac…"), it asks for an access
+token and shows status only; unloading an idle model still works.
 
 `Pinecone --snapshot out.png [--settings] [--dark]` draws the panel into a picture and quits, for checking
-design changes without clicking through the app.
+design changes without clicking through the app. It needs a running scheduler to have something to show.
+`Pinecone --icon out.png` draws the three states of the menu bar icon.

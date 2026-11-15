@@ -17,11 +17,16 @@ Its settings are under `"media"` in the config, all optional:
 | Setting | Meaning | If left out |
 |---|---|---|
 | `models` | Names the tools can use as `$name`, such as which model file ComfyUI should load. | none |
-| `comfy_input_dir` | ComfyUI's input folder, where pictures passed to a tool are put. | `files/` |
+| `files_dir` | Where results and uploaded files are kept. | `files/` next to the config |
+| `comfy_input_dir` | ComfyUI's input folder, where pictures passed to a tool are put. | `files_dir` |
 | `listen` | `{"host", "port"}` the server listens on. | `127.0.0.1`, `8090` |
 | `public_url`, `allowed_hosts` | The address other devices use (shown in the app), and the host names the server answers to. Needed behind a proxy. | this Mac only |
 | `keep_days` | Results and uploaded files older than this are deleted. `0` keeps them for good. | `7` |
-| `comfy_output_dir` | ComfyUI's output folder. Its own copy of a result is removed from there once the result is saved. | `output` next to `comfy_input_dir` |
+| `inline_mb` | A sound file up to this size also travels inside the answer that made it. | `0`: never |
+| `comfy_output_dir` | ComfyUI's output folder. Its own copy of a result is removed from there once the result is saved. | `output` next to `comfy_input_dir`; with neither set, nothing is removed |
+| `scheduler_url` | Where the scheduler is. | `http://127.0.0.1:` and the scheduler's port |
+
+`tools`, `models` and `keep_days` apply as you save. The other settings apply when the media server is started again.
 
 The server accepts the same access tokens as the scheduler, and tells the scheduler its address, which is
 how it appears under Endpoints in the app. `GET /health` lists the tools it made and names any it had to
@@ -34,12 +39,15 @@ writes a path on the caller's disk. There are two ways in each direction, and a 
 
 | | Inside the MCP call | Beside it, over HTTP |
 |---|---|---|
-| Getting a result | `get_file` returns any file as part of its answer, and `resources/read` returns `pinecone://files/<name>`. With `inline_mb` set, a sound file also comes inside the answer that made it. | The answer's `url`. It is built on the address the caller used and carries its own permission (a signature and an end date, a week ahead), so a download tool, a player or `curl` fetches it without a key. |
+| Getting a result | `get_file` returns any file as part of its answer, and `resources/read` returns `pinecone://files/<name>`. With `inline_mb` set, a sound file also comes inside the answer that made it. | The answer's `url`. It is built on the address the caller used and carries its own permission (a signature and an end date), so a download tool, a player or `curl` fetches it without a key. |
 | Giving a file | `put_file` takes the file's bytes (base64). File parameters are marked `"x-file": true` in the tool's schema, for clients that send files by themselves. | `upload_link`, and the error for a path the server cannot see, answer with a link to `PUT` the file to (no key, one hour) and the name to pass afterwards. An http(s) link to the file works as an argument too. |
 
-Every result is kept in `~/.pinecone/files/` for `keep_days` (a week), then deleted; a link ends when its file does. Each answer starts by telling the calling model that it does not
+Every result is kept in `~/.pinecone/files/` for `keep_days` (a week), then deleted. A link is good for a week, or for `keep_days` if that is shorter. Each answer starts by telling the calling model that it does not
 have the file yet and has to download it. Sound is not sent inside answers unless `inline_mb` says so: a client
 that does not keep such content shows its model a placeholder, and the model then takes the file for delivered.
+
+`get_file` sends files up to 32 MB inside its answer, and a link given as an argument may lead to 256 MB at most.
+Only files the server named itself are ever deleted; anything else in the folder is left alone.
 
 A full path on the server, and links to addresses that are not public, only work for callers on the same
 Mac: a call that arrives through a proxy (`tailscale serve`, a reverse proxy) is treated as coming from
@@ -63,8 +71,11 @@ another machine. So expose the server through a proxy, not by listening on `0.0.
       }
     }
 
-The name of the entry is the name of the tool. The server does the rest for every tool: it asks the
-scheduler for the service, reports the wait, saves the result and answers with the file's name and link.
+The name of the entry is the name of the tool; it cannot be the name of one that is always there.
+`description` and `run` are needed, and `service` unless the tool is written in Python. The server does the
+rest for every tool: it asks the scheduler for the service, reports the wait, saves the result and answers
+with the file's name and link. If the caller goes away meanwhile, the job is stopped and the service is let go.
+A ComfyUI job is given up after an hour.
 
 **`params`** are what the caller may pass. Each has a `type` and optionally `description`, `required`,
 `default` and `enum`.
@@ -97,9 +108,10 @@ read as a template. A name that does not exist is found when the config is saved
   item of a list, with `$i` (counting from 1) and `$item`.
 - `{"post": "/v1/audio/speech", "json": {...}}`: one request to the service. `"form"` sends form fields
   instead, and `"upload": {"file": "$audio"}` attaches a `file` parameter. An entry that comes out empty is left out.
-- `{"python": "my_tools.py:function"}`: a function in a file next to the config, for what the above cannot
-  describe. It is called with the tool's values and a helper (`scheduler(path)`, `lease(service)`,
-  `upload_link(filename)`, `headers`, `error(message)`) and returns text or something JSON can hold.
+- `{"python": "my_tools.py:function"}`: an `async` function in a file next to the config, for what the above
+  cannot describe. It is called with the tool's values and a helper (`scheduler(path)`, `lease(service, who)`,
+  `upload_link(filename)`, `headers`, `error(message)`) and returns text or something JSON can hold. The
+  server takes no lease and saves no file for it: the function does what it needs itself.
 
 **`variants`** are for a tool that works in more than one way. The first one whose `when` holds is used; it
 can replace `run` and `result`, add or replace `values`, and `patch` the workflow. In `when`, each entry
