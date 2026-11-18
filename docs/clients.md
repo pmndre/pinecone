@@ -38,7 +38,7 @@ the base URL, an access token as the API key, and a model name from your config.
     curl http://YOUR-MAC:8080/v1/chat/completions -H "Authorization: Bearer $PINECONE_TOKEN" \
       -H "Content-Type: application/json" -d '{"model": "small", "messages": [{"role": "user", "content": "Hello"}]}'
 
-`examples/pine-models.json` is a provider entry for [pine](https://github.com/pmndrs/pine): put it into
+`examples/pine-models.json` is a provider entry for [pine](https://github.com/pmndre/pine): put it into
 pine's `models.json`, set the address, and put the token into pine's `.env` as `PINECONE_TOKEN`.
 For the media tools, add the Media address as an MCP server with the header `Authorization: Bearer <token>`.
 

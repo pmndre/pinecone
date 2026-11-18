@@ -42,7 +42,7 @@ These are the addresses on the Mac itself. [Clients](docs/clients.md) says how t
 ### Start
 
 ```bash
-git clone https://github.com/pmndrs/pinecone && cd pinecone
+git clone https://github.com/pmndre/pinecone && cd pinecone
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python scheduler/scheduler.py
 ```
