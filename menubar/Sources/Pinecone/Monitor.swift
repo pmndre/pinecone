@@ -80,6 +80,10 @@ final class Monitor: ObservableObject {
     @AppStorage("serverURL") var serverURL = "http://127.0.0.1:8080"
     /// The launchd services the switch in the header starts and stops: the ones launchd/install.sh sets up.
     @AppStorage("serviceLabels") var serviceLabels = "dev.pinecone.scheduler, dev.pinecone.media-mcp"
+    /// The look of the panel: "system", "light" or "dark". It is this app's own, kept with the address above.
+    @Published var appearance = UserDefaults.standard.string(forKey: "appearance") ?? "system" {
+        didSet { UserDefaults.standard.set(appearance, forKey: "appearance"); applyAppearance() }
+    }
 
     @Published var status: Status?
     @Published var online = false
@@ -88,6 +92,11 @@ final class Monitor: ObservableObject {
     // View state lives here so the app builds with the Command Line Tools alone (no @State macro).
     @Published var showSettings = false
     @Published var moreEvents = false
+    /// The lists folded away in the panel ("Models", "Services"). Kept on this Mac, like the look.
+    @Published var folded = Set(UserDefaults.standard.stringArray(forKey: "folded") ?? []) {
+        didSet { UserDefaults.standard.set(folded.sorted(), forKey: "folded") }
+    }
+    @Published var hover = ""  // the folder the pointer is over
     @Published var newKey = ""
     @Published var atLogin = SMAppService.mainApp.status == .enabled
     @Published var note = ""
@@ -118,11 +127,18 @@ final class Monitor: ObservableObject {
     private var keychainKey = Keychain.read()
 
     init(poll: Bool = true) {
-        guard poll else { return }
+        guard poll else { return }  // a picture is drawn in the look it was asked for, not the saved one
+        applyAppearance()
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.refresh() }
         }
         Task { await refresh() }
+    }
+
+    /// Gives the app's windows the chosen look; with "system" they follow the Mac. The icon in the menu bar
+    /// is not touched by this: it follows the bar.
+    private func applyAppearance() {
+        NSApplication.shared.appearance = appearance == "light" ? NSAppearance(named: .aqua) : appearance == "dark" ? NSAppearance(named: .darkAqua) : nil
     }
 
     /// The scheduler's address without the scheme, for the header.
