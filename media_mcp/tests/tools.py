@@ -46,6 +46,18 @@ async def main():
         every = {n: (p_["enum"][-1] if "enum" in p_ else SAMPLE[p_["type"]]) for n, p_ in t.get("params", {}).items()}
         p = await server.plan(t, f, every, None, [])
         check(f"{t['name']} with every argument given", not leftovers([p.get("comfy"), p.get("json"), p.get("form")]))
+    named = {t.get("service") for t in tools.values()} | {v.get("service") for t in tools.values() for v in t.get("variants", [])}
+    check("every service a tool names is in the example config", named - {None} <= set(json.loads(f.read_text())["resources"]), str(named))
+    async def spoken(**args):
+        p = await server.plan({"name": "speak", **tools["speak"]}, f, {"text": "Hi.", **args}, None, [])
+        return p["service"], p["json"].get("model"), p["json"].get("voice")
+    check("speak: fast English goes to the small model on its own service", await spoken() == ("voca", "tiny-voca", "F2")
+          and await spoken(voice="m2") == ("voca", "tiny-voca", "m2"))
+    kokoro = "mlx-community/Kokoro-82M-bf16"
+    check("speak: fast in another language or voice, and balanced, go to Kokoro", await spoken(language="es") == ("audio", kokoro, "af_heart")
+          and await spoken(voice="bf_emma") == ("audio", kokoro, "bf_emma") and await spoken(quality="balanced") == ("audio", kokoro, "af_heart"))
+    check("speak: realistic, and a language Kokoro lacks, go to the large model", (await spoken(quality="realistic"))[:2] == (await spoken(language="de"))[:2]
+          == ("audio", "mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16"))
     # the pieces of the format
     env = {"a": 2, "s": "x", "items": ["p", "q"], "t": True, "none": ""}
     check("a lone $name keeps its type, inside text it becomes text", server.fill({"n": "$a", "k$a": "v-$s-$$"}, env) == {"n": 2, "k2": "v-x-$"})

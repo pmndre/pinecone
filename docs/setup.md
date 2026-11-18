@@ -23,7 +23,13 @@ folder: run it again after moving that folder.
 
 ## The media server
 
-Optional. It needs ComfyUI and mlx-audio (or whatever your tools use) installed, and the two services `comfy` and `audio` in the config; the config a first start gives you has both.
+Optional. It needs ComfyUI and mlx-audio (or whatever your tools use) installed, and the services `comfy`, `audio` and `voca` in the config; the config a first start gives you has all three.
+
+`voca` needs nothing installed but llama.cpp, the server `LLAMA_SERVER` already names. It is the fast English
+voice of `speak`, so that tool works before mlx-audio is there. Two things to know:
+
+- llama.cpp must be from 18 November 2026 or later; an older one cannot run tiny-voca.
+- Its first start downloads the model (26 MB) from Hugging Face into `~/.cache/huggingface/`. After that it starts without a network.
 
     .venv/bin/python media_mcp/server.py
 
@@ -73,7 +79,7 @@ setup is in one place:
 | Folder | For | Such as |
 |---|---|---|
 | `~/.pinecone/models/` | Model files, and the server that runs them. | `llama.cpp/`, `qwen-27b/`, `deepseek/` |
-| `~/.pinecone/services/` | Everything else a tool talks to, each in its own folder with its own environment. | `ComfyUI/`, `audio/` (mlx-audio), `tiny-voca/` |
+| `~/.pinecone/services/` | Everything else a tool talks to, each in its own folder with its own environment. | `ComfyUI/`, `audio/` (mlx-audio) |
 
     # .env
     MODELS=/Users/you/.pinecone/models

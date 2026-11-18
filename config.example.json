@@ -32,6 +32,16 @@
       "cmd": [
         "$AUDIO/.venv/bin/python", "-m", "mlx_audio.server", "--host", "127.0.0.1", "--port", "$PORT"
       ]
+    },
+    "voca": {
+      "type": "service",
+      "title": "tiny-voca (fast English speech)",
+      "memory_gb": 0.5,
+      "port": 8190,
+      "cmd": [
+        "$LLAMA_SERVER", "-hf", "ggml-org/tiny-voca-GGUF", "-ngl", "0", "--no-mmproj-offload", "--host",
+        "127.0.0.1", "--port", "$PORT"
+      ]
     }
   },
   "media": {
@@ -48,7 +58,8 @@
       "sfx_checkpoint": "stable_audio_3_small_sfx.safetensors",
       "audio_checkpoint": "stable_audio_3_medium.safetensors",
       "audio_clip": "t5gemma_b_b_ul2.safetensors",
-      "tts_fast": "mlx-community/Kokoro-82M-bf16",
+      "tts_fast": "tiny-voca",
+      "tts_balanced": "mlx-community/Kokoro-82M-bf16",
       "tts_realistic": "mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16",
       "tts_design": "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
       "stt": "mlx-community/whisper-large-v3-turbo-asr-fp16"
@@ -515,18 +526,18 @@
           "type": "string",
           "default": "en",
           "lower": true,
-          "description": "German needs quality \"realistic\"."
+          "description": "Anything but English needs quality \"balanced\" or \"realistic\"; German, Russian and Korean need \"realistic\"."
         },
         "quality": {
           "type": "string",
-          "enum": ["fast", "realistic"],
+          "enum": ["fast", "balanced", "realistic"],
           "default": "fast",
-          "description": "\"fast\" (Kokoro) starts almost instantly and supports en, en-gb, es, fr, it, pt, hi, ja, zh. \"realistic\" (Qwen3-TTS) is slower and more natural, and supports en, de, fr, es, it, pt, ru, ja, ko, zh."
+          "description": "\"fast\" (tiny-voca) is made in a moment and needs no GPU memory; American English only, two voices. \"balanced\" (Kokoro) has many voices and supports en, en-gb, es, fr, it, pt, hi, ja, zh; it also takes over when \"fast\" is asked for one of these languages or voices. \"realistic\" (Qwen3-TTS) is slower and the most natural, and supports en, de, fr, es, it, pt, ru, ja, ko, zh."
         },
         "voice": {
           "type": "string",
           "default": "",
-          "description": "fast: voices look like af_heart, af_bella, am_michael, bf_emma, bm_george. realistic: Vivian, Serena, Ryan, Aiden, Eric, Dylan, Uncle_Fu, Ono_Anna, Sohee."
+          "description": "fast: F2 (a woman) or M2 (a man). balanced: voices look like af_heart, af_bella, am_michael, bf_emma, bm_george. realistic: Vivian, Serena, Ryan, Aiden, Eric, Dylan, Uncle_Fu, Ono_Anna, Sohee."
         },
         "style": {
           "type": "string",
@@ -575,11 +586,22 @@
         {
           "when": {
             "quality": "fast",
+            "language": {"in": ["en", "en-us"]},
+            "voice": {"in": ["", "F2", "M2", "f2", "m2"]},
+            "voice_description": ""
+          },
+          "service": "voca",
+          "values": {"model": "$tts_fast", "use_voice": {"first": ["$voice", "F2"]}},
+          "run": {"post": "/v1/audio/speech", "json": {"model": "$model", "input": "$text", "voice": "$use_voice"}}
+        },
+        {
+          "when": {
+            "quality": {"in": ["fast", "balanced"]},
             "language": {"in": ["en", "en-us", "en-gb", "es", "fr", "hi", "it", "ja", "pt", "zh"]},
             "voice_description": ""
           },
           "values": {
-            "model": "$tts_fast",
+            "model": "$tts_balanced",
             "use_voice": {
               "first": ["$voice", {"from": "$language", "map": {"en-gb": "bf_emma"}, "else": "af_heart"}]
             },

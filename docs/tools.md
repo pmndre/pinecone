@@ -7,8 +7,12 @@ The media server turns the entries under `"tools"` in the config into MCP tools.
 `media_mcp/server.py` is an MCP server (streamable HTTP at `/mcp`). It reads the same `config.json` as the
 scheduler and makes one tool from every entry under `"tools"`, taking up changes as the file is saved. The
 config that the first start gives you comes with `generate_image`, `edit_image`, `remove_background`,
-`generate_music`, `generate_sound`, `speak` and `transcribe`, on top of two services named `comfy` (ComfyUI)
-and `audio` (mlx-audio). Four tools are always there: `upload_link`, `put_file`, `get_file` and `media_status`.
+`generate_music`, `generate_sound`, `speak` and `transcribe`, on top of three services named `comfy` (ComfyUI),
+`audio` (mlx-audio) and `voca` (tiny-voca, a small speech model that llama.cpp runs). Four tools are always
+there: `upload_link`, `put_file`, `get_file` and `media_status`.
+
+`speak` shows how one tool can use two services. Its quality `fast` in English goes to `voca`, which needs no
+GPU memory and answers in a moment. Every other call goes to `audio`.
 
     .venv/bin/python media_mcp/server.py
 
