@@ -27,14 +27,18 @@ installed by `launchd/install.sh`.
 
 Models and services are two lists, each under a line that folds it away with a click, as pine's side bar
 has an agent and its conversations. A model or service that is loading, unloading or answering a request
-shows a ring that goes round, and so does the line of its list, so work is seen when the list is folded.
-One that did not start shows a "!" and says why. What a name stands for (its `title` in the config) shows
-when the pointer rests on it. What is folded is kept in the app's preferences on this Mac.
+shows a spinner, and so does the line of its list, so work is seen when the list is folded. One that did
+not start shows a "!" and says why. What a name stands for (its `title` in the config) shows when the
+pointer rests on it. What is folded is kept in the app's preferences on this Mac.
 
-The panel looks like pine's desktop app: cards on the window, neutral surfaces and one green. Light and dark
-follow the system, and dark is the poimandres theme. Settings, This app, "Appearance" keeps it light or
-dark whatever the system is set to. The choice is the app's own, kept in its preferences on this Mac and
-not in `config.json`. The colours are in `Theme`, at the top of `App.swift`.
+The panel is drawn in the design language of pine's desktop app (`desktop/DESIGN.md` in the pine
+repository). pine's page is stock shadcn in its `base-nova` style; the app is SwiftUI, so each part is drawn
+after its shadcn counterpart, at the same sizes and with the same variants: Card, Item, Field, Alert, Button,
+Switch, Slider, ToggleGroup. The panel is one of pine's side bars, with the inset of pine's tab content, and
+its ends fade where there is more to scroll to. Light and dark follow the system, and dark is pine's pmndre
+theme. Settings, This app, "Appearance" keeps it light or dark whatever the system is set to. The choice is
+the app's own, kept in its preferences on this Mac and not in `config.json`. The colours and sizes are in
+`Theme`, and the parts follow it, in `App.swift`.
 
 Settings hold what is the user's to decide on this Mac: the memory split and whether the scheduler sets the
 GPU memory limit, whether and where other devices reach it and on which port, how long a request waits
@@ -50,5 +54,7 @@ scheduler on another Mac (Settings, This app, "Watch a scheduler on another Macâ
 token and shows status only; unloading an idle model still works.
 
 `Pinecone --snapshot out.png [--settings] [--dark]` draws the panel into a picture and quits, for checking
-design changes without clicking through the app. It needs a running scheduler to have something to show.
+design changes without clicking through the app. It needs a running scheduler to have something to show;
+`-serverURL http://127.0.0.1:PORT` points it at another one for this run only, without changing the app's
+preferences. A picture shows the lists unfolded.
 `Pinecone --icon out.png` draws the three states of the menu bar icon.

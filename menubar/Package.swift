@@ -3,6 +3,6 @@ import PackageDescription
 
 let package = Package(
     name: "Pinecone",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("15.0")],
     targets: [.executableTarget(name: "Pinecone", path: "Sources/Pinecone")]
 )

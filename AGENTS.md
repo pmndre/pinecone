@@ -20,7 +20,7 @@ model or one service goes into this repository.
 | `media_mcp/tests/` | `tools.py` checks the tools of the example config without any service; `call.py` calls one tool of a running server. |
 | `envfile.py` | Shared by both services: where the user's folder is, the first-start copy, `$NAME` variables, writing config. |
 | `config.example.json`, `.env.example` | What a new user's `~/.pinecone/` starts with, including the tools that ship. |
-| `menubar/` | The menu bar app: `Sources/Pinecone/App.swift` (views), `Monitor.swift` (state, requests), `build.sh`. |
+| `menubar/` | The menu bar app: `Sources/Pinecone/App.swift` (views, and the parts they are made of), `Monitor.swift` (state, requests), `build.sh`. |
 | `launchd/` | Templates and `install.sh` for running the two services at login. |
 | `docs/` | The documentation, one page for each subject, and `images/` for the pictures in it. |
 | `examples/` | Files for clients, such as a provider entry for pine. |
@@ -102,4 +102,10 @@ Never print `internal-key.txt`, `tokens.json` or `.env`, and never copy them int
   To try a tool for real: `media_mcp/tests/call.py <tool> '<json arguments>'` (it loads the service).
 - The app builds with the Command Line Tools only, so SwiftUI macros that need Xcode (`@State`, `#Preview`)
   are not available. View state lives in `Monitor` as `@Published` properties.
+- The panel follows the design of pine's desktop app: read pine's `desktop/DESIGN.md` before changing a view.
+  pine's page is stock shadcn (`base-nova`); here each part (`Card`, `Item`, `Alert`, `Pine` buttons,
+  `PineSwitch`, `PineSlider`, `ToggleGroup`, `Input`, `SideGroup`) is drawn after its shadcn counterpart, at its
+  sizes and with its variants. A view is made of these parts; a colour or size comes from `Theme`, never a
+  value of its own.
+- The app needs macOS 15 (the scroll fade reads how far the panel is scrolled).
 - Check design changes with `Pinecone --snapshot out.png [--settings] [--dark]`; it renders the real panel.
