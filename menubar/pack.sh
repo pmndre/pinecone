@@ -72,13 +72,13 @@ else
 
     # Sent to Apple and waited for; when Apple refuses it, its log says why.
     notarise() {
-        local out id status
+        local out id verdict
         out=$(xcrun notarytool submit "$1" --key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" \
             --wait --timeout 30m --output-format json)
         id=$(print -r -- "$out" | plutil -extract id raw -o - -)
-        status=$(print -r -- "$out" | plutil -extract status raw -o - -)
-        echo "notarisation of $(basename "$1"): $status ($id)"
-        if [[ $status != Accepted ]]; then
+        verdict=$(print -r -- "$out" | plutil -extract status raw -o - -)
+        echo "notarisation of $(basename "$1"): $verdict ($id)"
+        if [[ $verdict != Accepted ]]; then
             xcrun notarytool log "$id" --key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" >&2 || true
             exit 1
         fi
