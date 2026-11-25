@@ -37,6 +37,9 @@ voice of `speak`, so that tool works before mlx-audio is there. Two things to kn
 
 ## The menu bar app
 
+Each release on GitHub has the app, signed and notarised: open `Pinecone-<version>.dmg` from
+https://github.com/pmndre/pinecone/releases and drag Pinecone to Applications. Or build it yourself:
+
     menubar/build.sh                                   # needs only the Xcode Command Line Tools
     cp -R menubar/build/Pinecone.app /Applications/
 

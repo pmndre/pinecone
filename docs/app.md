@@ -18,6 +18,24 @@ Pinecone.app shows what the scheduler is doing and holds the settings that are y
     menubar/build.sh                                   # needs only the Xcode Command Line Tools
     cp -R menubar/build/Pinecone.app /Applications/
 
+Or take `Pinecone-<version>.dmg` from a release on GitHub. It needs macOS 15 or later.
+
+## Releases
+
+Every push to `main` is a release, as in pine (`.github/workflows/release.yml`): the tests are run, the
+next version is tagged, and a GitHub release is made with the app attached. The patch number goes up,
+unless a commit since the last release says `[minor]` or `[major]` in its message; a push whose last
+commit says `[skip release]` releases nothing. Work goes to `next`, the default branch, and reaches `main`
+when it is to be released.
+
+`menubar/pack.sh <version>` makes the disk image: one app for both kinds of Mac (it needs Xcode, for the
+two architectures). With the signing secrets in its environment it signs the app with a Developer ID and
+the hardened runtime, has Apple notarise the app and then the disk image, staples both, and checks them
+as another Mac would (`spctl`). Without them it signs ad hoc, for trying on this Mac only. The workflow
+reads the secrets from an environment named `release` that only `main` may use; they are pine's five
+(`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`), described at the top
+of the workflow. Without them a release still happens, and the job that builds the app says it built none.
+
 The icon is faded while the scheduler is off and shows a dot while something is loading or working. The
 panel lists models and services with their state and memory, a memory bar split by what is loaded, what
 is waiting, CPU, GPU and memory graphs, the endpoints to give to clients (with a button to copy each),

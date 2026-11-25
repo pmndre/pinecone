@@ -20,7 +20,8 @@ model or one service goes into this repository.
 | `media_mcp/tests/` | `tools.py` checks the tools of the example config without any service; `call.py` calls one tool of a running server. |
 | `envfile.py` | Shared by both services: where the user's folder is, the first-start copy, `$NAME` variables, writing config. |
 | `config.example.json`, `.env.example` | What a new user's `~/.pinecone/` starts with, including the tools that ship. |
-| `menubar/` | The menu bar app: `Sources/Pinecone/App.swift` (views, and the parts they are made of), `Monitor.swift` (state, requests), `build.sh`. |
+| `menubar/` | The menu bar app: `Sources/Pinecone/App.swift` (views, and the parts they are made of), `Monitor.swift` (state, requests), `build.sh` (this Mac), `pack.sh` (a signed, notarised disk image). |
+| `.github/workflows/release.yml` | Every push to `main`: tests, the next version, a GitHub release with the app attached. |
 | `launchd/` | Templates and `install.sh` for running the two services at login. |
 | `docs/` | The documentation, one page for each subject, and `images/` for the pictures in it. |
 | `examples/` | Files for clients, such as a provider entry for pine. |
@@ -68,6 +69,9 @@ Never print `internal-key.txt`, `tokens.json` or `.env`, and never copy them int
 - **Tests come with behaviour.** Add a check for what is new, to the tests that run without models.
 - **Commits** have a subject that says what changes, as a sentence without a full stop, and a body that
   says why, what was done, and how it was tested.
+- **Branches:** work goes to `next`, the default branch. A push to `main` is a release (docs/app.md,
+  Releases): `[minor]` or `[major]` in a commit's message raises that number, `[skip release]` in the last
+  commit's releases nothing.
 
 ## Operating a running install
 
