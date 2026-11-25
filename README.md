@@ -10,7 +10,7 @@ Run more local AI than fits into your Mac's memory at once.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/panel-dark.png">
-    <img src="docs/images/panel.png" alt="The Pinecone menu bar panel" width="400">
+    <img src="docs/images/panel.png" alt="The Pinecone menu bar panel" width="440">
   </picture>
 </p>
 
