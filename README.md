@@ -43,7 +43,9 @@ These are the addresses on the Mac itself. [Clients](docs/clients.md) says how t
 
 Get the menu bar app from the **[latest release](https://github.com/pmndre/pinecone/releases/latest)**: open
 `Pinecone-<version>.dmg` and drag Pinecone to Applications. It is signed and notarised, runs on Apple silicon and
-Intel, and needs macOS 15. Then the scheduler it shows, from this repository:
+Intel, and needs macOS 15.
+
+The app shows and controls the scheduler, which is not part of it. Install the scheduler from this repository:
 
 ```bash
 git clone https://github.com/pmndre/pinecone && cd pinecone
