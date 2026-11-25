@@ -70,8 +70,8 @@ Never print `internal-key.txt`, `tokens.json` or `.env`, and never copy them int
 - **Commits** have a subject that says what changes, as a sentence without a full stop, and a body that
   says why, what was done, and how it was tested.
 - **Branches:** work goes to `next`, the default branch. A push to `main` is a release (docs/app.md,
-  Releases): `[minor]` or `[major]` in a commit's message raises that number, `[skip release]` in the last
-  commit's releases nothing.
+  Releases): `[minor]` or `[major]` in a commit's subject raises that number, `[skip release]` in the last
+  commit's subject releases nothing.
 
 ## Operating a running install
 

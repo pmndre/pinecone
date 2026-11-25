@@ -5,8 +5,9 @@ name: Release
 # (Pinecone-<version>.dmg).
 #
 # The version follows from the commits since the last release: the patch number goes up, unless one of
-# them says [minor] or [major] in its message, which raises that number instead. The first release is
-# the version in menubar/Info.plist. A push whose last commit says [skip release] releases nothing.
+# them says [minor] or [major] in its subject, which raises that number instead. The first release is
+# the version in menubar/Info.plist. A push whose last commit says [skip release] in its subject releases
+# nothing. Only the subject counts, so that a message can name these words without doing what they say.
 #
 # The app is signed with a Developer ID, notarised by Apple and checked the way another Mac checks it
 # before it is uploaded (menubar/pack.sh). That needs the five secrets pine's release uses, in an
@@ -56,7 +57,7 @@ jobs:
       - id: version
         name: The next version
         run: |
-          if git log -1 --format=%B | grep -qi '\[skip release\]'; then
+          if git log -1 --format=%s | grep -qi '\[skip release\]'; then
             echo "::notice::The last commit says [skip release]; nothing is released."
             exit 0
           fi
@@ -66,7 +67,7 @@ jobs:
             why="the first release"
           else
             IFS=. read -r major minor patch <<< "${last#v}"
-            messages=$(git log --format=%B "$last..HEAD")
+            messages=$(git log --format=%s "$last..HEAD")
             if printf '%s' "$messages" | grep -qi '\[major\]'; then major=$((major + 1)); minor=0; patch=0; why="a commit says [major]"
             elif printf '%s' "$messages" | grep -qi '\[minor\]'; then minor=$((minor + 1)); patch=0; why="a commit says [minor]"
             else patch=$((patch + 1)); why="the patch number"; fi

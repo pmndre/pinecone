@@ -24,8 +24,8 @@ Or take `Pinecone-<version>.dmg` from a release on GitHub. It needs macOS 15 or 
 
 Every push to `main` is a release, as in pine (`.github/workflows/release.yml`): the tests are run, the
 next version is tagged, and a GitHub release is made with the app attached. The patch number goes up,
-unless a commit since the last release says `[minor]` or `[major]` in its message; a push whose last
-commit says `[skip release]` releases nothing. Work goes to `next`, the default branch, and reaches `main`
+unless a commit since the last release says `[minor]` or `[major]` in its subject; a push whose last
+commit says `[skip release]` in its subject releases nothing. Work goes to `next`, the default branch, and reaches `main`
 when it is to be released.
 
 `menubar/pack.sh <version>` makes the disk image: one app for both kinds of Mac (it needs Xcode, for the
