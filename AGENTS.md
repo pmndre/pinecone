@@ -88,6 +88,71 @@ Never print `internal-key.txt`, `tokens.json` or `.env`, and never copy them int
 - **Read keys from the files, never echo them.** `$(cat ~/.pinecone/internal-key.txt)` inside a command is fine.
 - **A model's real memory use** is `actual_gb` in the status while it is loaded. Set `memory_gb` a little above it.
 
+## Running models well
+
+What running models on a Mac taught us. None of it is about one model; the numbers are from our own tests.
+
+**Choosing a server and a build**
+
+- **An MLX server can be much faster than llama.cpp.** With oMLX instead of llama.cpp and GGUF, the same
+  model generated 1.5 to 2.3 times as fast and read prompts 3 to 3.7 times as fast. Both models were
+  mixtures of experts; a dense model may gain less. Measure before you switch.
+- **Add a new server next to the old one, not in its place.** A second entry under `"resources"` can be
+  measured against the first through the scheduler, and clients move over by name.
+- **Prefer drafting from inside the model.** A build whose own MTP head drafts tokens (oMLX builds named
+  `-mtp`) had 70 to 80 % of its drafts accepted; llama.cpp with a separate draft file had 30 to 40 %. The
+  accepted share is most of the speed.
+- **Drafting helps one request at a time.** oMLX drafts only while a single request runs. Three at once
+  gave about as many tokens a second in total as one alone, so a higher limit on parallel requests buys
+  little.
+- **Check that another build has the same weights.** Fine-tunes and abliterations with the same name come
+  from different makers. The name inside a GGUF can be the quantizer's. The revision hash in
+  `.cache/huggingface/download/*.metadata` names the source: `GET /api/models/<repo>/revision/<hash>` on
+  Hugging Face answers 200 for the right repository.
+- **A repository's size** is the sum of the files in `/api/models/<repo>/tree/main?recursive=true`.
+  `usedStorage` counts its whole history.
+- **Downloads:** `hf download` was nearly three times as fast with `HF_XET_HIGH_PERFORMANCE=1` and
+  `--max-workers 16`. Stopped and started again, it goes on where it was.
+
+**An oMLX entry**
+
+- **One entry, one model, one home.** Each entry runs its own `omlx serve` with its own `--base-path`. The
+  `model_settings.json` there pins the model, turns MTP on and holds its sampling. Two entries that share a
+  home pin, and load, each other's models.
+- **`--model-dir` can be one folder for all MLX models**, but each model's folder must have its entry's
+  name: the scheduler passes `"model"` through unchanged.
+- **Also pass** `--no-hf-cache`, `--memory-guard-gb` equal to `memory_gb`, and
+  `--paged-ssd-cache-dir $CONFIG_DIR/cache/<name>` with `--paged-ssd-cache-max-size`. That is oMLX's own store
+  of what was read; it does what `keep_cache` does for llama.cpp.
+- **`/health` answers 503 until the pinned model is loaded**, and the scheduler waits for that.
+- **Memory for macOS:** oMLX warns when the GPU limit leaves macOS less than about 12.8 GB, because a large
+  load can then get the process killed. A `system_reserve_gb` of 8 is below that; 12 or 13 is safer.
+
+**Settings that differ between servers**
+
+- **Thinking is switched differently.** Some chat templates take a template argument
+  (`chat_template_kwargs`, for example `reasoning_effort`), others the OpenAI field, and a server may pass
+  on only one of them. Ask a new server the same question at each level and compare `reasoning_tokens` in
+  the usage. Some templates think at their maximum when nothing is passed.
+- **Sampling:** llama.cpp started without sampling flags uses its own defaults, not the model's. oMLX takes
+  `model_settings.json` and the model's `generation_config.json`. Put the model's recommended values into
+  the server's settings, so every client gets them.
+- **Pictures** worked on every vision model we tried. **Video** depends on the server and the model type:
+  oMLX refused it for a model that understands video. Test before a tool relies on it.
+- **Tool calls:** send one request with a `tools` list and check that `finish_reason` is `tool_calls`.
+
+**Measuring**
+
+- **Through the scheduler**, never the server's port. Start every prompt with a random line, so no cache
+  helps, except in a test that sends a long prompt twice on purpose. Take the middle of three runs.
+- **From the stream:** time to the first token; prompt tokens over that time for reading; tokens after the
+  first over the time after it for generating. Add a run of three requests at once.
+- **Stop the clients first.** Their requests make the scheduler swap models in the middle of a run.
+- **Real use is slower** than a clean run: longer contexts, several requests. llama.cpp's log has the real
+  numbers (`eval time ... tokens per second`, `draft acceptance`); oMLX logs `MTP[...] accept=`.
+- **After a switch,** clients still name the old entry: their model list and each agent's model must
+  change too. A running client may keep the old model until it is told (pine: `pine agent update <id> --model`).
+
 ## How the scheduler works
 
 - `load_config` reads the file, checks it (`check_config`), fills in defaults and variables.
