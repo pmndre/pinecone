@@ -15,6 +15,7 @@ What the scheduler and the media server answer to over HTTP. Everything but the 
 | `GET /scheduler/status` | Everything the app shows, as JSON: resources, queue, recent events, machine load, endpoints. |
 | `POST /scheduler/acquire {"resource", "ttl_s", "who"}` | Take a lease on a service; answers `{"lease", "resource", "url", "ttl_s"}` once it is ready. `ttl_s` is 1 to 3600 seconds (600 if left out), `who` a name to show for the caller. A lease that is not renewed ends by itself. |
 | `POST /scheduler/renew {"lease", "ttl_s"}`, `POST /scheduler/release {"lease"}` | Keep a lease for another `ttl_s`, or give it back. |
+| `GET /scheduler/connect/<service>[/path]` | A WebSocket to a service, passed through both ways, to `/path` (or `/`) on it, with the query. The service is loaded first (the handshake waits) and held while the socket is open. Messages, pings and the close code go through unchanged; the key does not. 404 for a name that is not a service, 400 without a WebSocket handshake, 502 when the service does not take it. |
 | `POST /scheduler/unload {"resource"}` | Unload something idle. |
 | `GET /scheduler/config` | `{"config", "order", "env"}`: the config file, the order of its resources, and the entries of `.env`. Own key only. |
 | `POST /scheduler/config {"patch": {...}, "env": {...}}` | Merge the patch into the file (null removes a key), check, save, apply; `env` sets or (null) removes entries of `.env`. Answers `{"ok", "changes"}`. Own key only. |

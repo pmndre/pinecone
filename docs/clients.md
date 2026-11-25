@@ -42,6 +42,21 @@ the base URL, an access token as the API key, and a model name from your config.
 pine's `models.json`, set the address, and put the token into pine's `.env` as `PINECONE_TOKEN`.
 For the media tools, add the Media address as an MCP server with the header `Authorization: Bearer <token>`.
 
+## Talking to a voice service
+
+A full-duplex voice model listens and speaks at the same time, so it is a conversation, not a request. It runs as a
+service in the config, and a client reaches it with a WebSocket through the scheduler:
+`ws://YOUR-MAC:8080/scheduler/connect/<service>`, with the same `Authorization` header. The scheduler loads the
+service, holds it while the socket is open, and passes everything through; what goes over the socket is the
+service's own business.
+
+`examples/talk.py` does this with the computer's microphone and speakers, for a service that sends and takes raw
+PCM16 mono audio at 24 kHz, as Sophon-Realtime's `serve.py` does. It needs only `uv`:
+
+    PINECONE_TOKEN=pc-... uv run examples/talk.py --url http://YOUR-MAC:8080 --service sophon
+
+On the Mac that runs Pinecone, the URL and the token can be left out. Use headphones if you can.
+
 ## Files, from a client's point of view
 
 A client on another computer shares no disk with the server. A tool that makes a file answers with a link; a tool that takes a file wants it sent first. [Media tools](tools.md#files) has the details. In short:

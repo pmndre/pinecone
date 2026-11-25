@@ -32,6 +32,17 @@ async def slot(r):
         with open(path) as f: memory[i] = f.read()
         return web.json_response({"id_slot": i, "filename": name, "n_restored": len(memory[i]), "n_read": len(memory[i])})
     return web.json_response({"error": "unknown action"}, status=400)
+# A WebSocket, as a voice service has: echoes what it gets with its name, says where it was reached, and on "bye" closes
+# with a code of its own (4001) and a reason.
+async def ws(r):
+    s = web.WebSocketResponse(); await s.prepare(r)
+    await s.send_str(f"{name} at {r.path_qs}")
+    async for m in s:
+        if m.type == web.WSMsgType.TEXT and m.data == "bye": await s.close(code=4001, message=b"asked to"); break
+        if m.type == web.WSMsgType.TEXT: await s.send_str(f"{name}: {m.data}")
+        elif m.type == web.WSMsgType.BINARY: await s.send_bytes(m.data[::-1])
+    return s
 app = web.Application(); app.router.add_get("/health", health); app.router.add_post("/v1/chat/completions", chat)
+app.router.add_get("/", ws); app.router.add_get("/talk", ws)
 app.router.add_get("/slots", slots); app.router.add_post("/slots/{id}", slot)
 web.run_app(app, host="127.0.0.1", port=port, print=None)

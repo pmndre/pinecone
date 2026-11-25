@@ -45,6 +45,7 @@ folder, run `launchd/install.sh` again: the services are installed with its path
 
     .venv/bin/python scheduler/scheduler.py scheduler/tests/config.json &     # stand-in servers, port 18080
     .venv/bin/python scheduler/tests/run.py
+    .venv/bin/python scheduler/tests/connect.py                 # WebSockets to a service, same scheduler
     kill %1                                          # the next ones start their own scheduler, on the same port
     .venv/bin/python scheduler/tests/reload.py
     .venv/bin/python scheduler/tests/cache.py

@@ -41,7 +41,7 @@ from pathlib import Path
 import re
 
 import psutil
-from aiohttp import ClientError, ClientSession, ClientTimeout, web
+from aiohttp import ClientError, ClientSession, ClientTimeout, WSMsgType, web
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -1028,6 +1028,72 @@ async def passthrough(request):
     return await proxy(request, r, await request.read(), False)
 
 
+async def connect(request):
+    """A WebSocket to a service, passed through both ways: for a service that is talked to, not asked (a voice
+    conversation). The service is loaded first and held while the socket is open, as a lease would hold it. The caller's
+    key stays here, like everywhere; pings and pongs go through, so the service measures the caller's real link."""
+    sched = request.app["sched"]
+    who = caller(request)
+    if who is None:
+        return err(401, "Invalid API Key", "authentication_error")
+    name = request.match_info["resource"]
+    r = sched.res.get(name)
+    if not r or r.retired or r.kind != "service":
+        services = [n for n, x in sched.res.items() if x.kind == "service" and not x.retired]
+        return err(404, f"unknown service {name!r}. Services: {', '.join(services)}")
+    down = web.WebSocketResponse(autoping=False, max_msg_size=16 * 1024 * 1024)
+    if not down.can_prepare(request):
+        return err(400, "this route takes a WebSocket")
+    try:
+        run = await wait_for(request, sched, name, f"{request.remote} websocket ({who})")
+    except (ConnectionResetError, asyncio.CancelledError):
+        raise
+    except Exception as e:  # noqa: BLE001
+        return err(503, str(e))
+    try:
+        url = "ws" + r.base[4:] + (request.match_info.get("tail") or "/") + (f"?{request.query_string}" if request.query_string else "")
+        try:  # before the caller's handshake is answered, so a service that will not talk is an HTTP error
+            up = await sched.http.ws_connect(url, autoping=False, max_msg_size=16 * 1024 * 1024)
+        except (ClientError, OSError) as e:
+            return err(502, f"{name} did not take the WebSocket: {e}")
+        async with up:
+            await down.prepare(request)
+
+            async def pump(src, dst):
+                """Passes messages on until src closes; returns its close code and reason, for the other side."""
+                while True:
+                    m = await src.receive()
+                    if m.type == WSMsgType.TEXT:
+                        await dst.send_str(m.data)
+                    elif m.type == WSMsgType.BINARY:
+                        await dst.send_bytes(m.data)
+                    elif m.type == WSMsgType.PING:
+                        await dst.ping(m.data)
+                    elif m.type == WSMsgType.PONG:
+                        await dst.pong(m.data)
+                    elif m.type == WSMsgType.CLOSE:  # 1005, 1006 and 1015 only report, they cannot be sent
+                        return (1000 if m.data in (None, 1005, 1006, 1015) else m.data), (m.extra or "").encode()[:120]
+                    else:  # closed or broken without a close frame
+                        return 1011 if m.type == WSMsgType.ERROR else 1000, b""
+
+            tasks = {asyncio.ensure_future(pump(up, down)): down, asyncio.ensure_future(pump(down, up)): up}
+            try:
+                done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            finally:
+                for t in tasks:
+                    t.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+            for t in done:  # the side that ended says why, and the other side is told
+                code, reason = t.result() if not t.cancelled() and t.exception() is None else (1011, b"")
+                with contextlib.suppress(ConnectionError, RuntimeError):
+                    await tasks[t].close(code=code, message=reason)
+            with contextlib.suppress(ConnectionError, RuntimeError):
+                await down.close()
+        return down
+    finally:
+        sched.release(name, run)
+
+
 async def health(request):
     out = {"status": "ok"}
     if request.remote in ("127.0.0.1", "::1"):  # lets the menu bar app on this Mac find the key by itself
@@ -1181,6 +1247,7 @@ def build(cfg, path=None):
     app.on_cleanup.append(on_cleanup)
     app.router.add_get("/health", health)
     app.router.add_route("*", "/scheduler/{op}", api)
+    app.router.add_get("/scheduler/connect/{resource}{tail:(/.*)?}", connect)
     app.router.add_route("*", "/v1/{tail:.*}", v1)
     app.router.add_route("*", "/{tail:.*}", passthrough)
     return app
