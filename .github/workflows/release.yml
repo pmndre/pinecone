@@ -39,8 +39,9 @@ permissions:
 jobs:
   release:
     if: github.event_name == 'push'
-    # The scheduler is made for macOS (memory, the GPU limit), so its tests run there.
-    runs-on: macos-15
+    # The scheduler is made for macOS (memory, the GPU limit), so its tests run there: on the Intel runner, whose
+    # 14 GB leave room for a reserve (4 GB to half the memory); the Apple silicon runner has 7 GB, which leave none.
+    runs-on: macos-15-intel
     # One at a time: the version is worked out from the tags there are.
     concurrency:
       group: release

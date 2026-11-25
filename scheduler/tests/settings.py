@@ -6,12 +6,15 @@ import aiohttp, psutil
 HERE = Path(__file__).resolve().parent
 B = "http://127.0.0.1:18080"; H = {"Authorization": "Bearer test-key"}
 TOTAL = round(psutil.virtual_memory().total / 2 ** 30, 1)
+# Two reserves this Mac allows (the scheduler takes 4 GB to half its memory): 10 and 12 where they fit, less on a
+# smaller Mac, such as the runner the release workflow tests on.
+R1, R2 = min(10, int(TOTAL // 2) - 1), min(12, int(TOTAL // 2))
 ok = True
 def check(label, cond, extra=""):
     global ok; ok &= bool(cond); print("PASS " if cond else "FAIL ", label, extra)
 async def main():
     cfg = json.loads((HERE / "config.json").read_text().replace("$CONFIG_DIR", str(HERE)))  # the copy lives elsewhere
-    del cfg["memory_budget_gb"]; cfg["system_reserve_gb"] = 10; cfg["manage_gpu_limit"] = False
+    del cfg["memory_budget_gb"]; cfg["system_reserve_gb"] = R1; cfg["manage_gpu_limit"] = False
     for c in cfg["resources"].values(): c["memory_gb"] = 1
     path = Path(tempfile.mkdtemp()) / "config.json"; path.write_text(json.dumps(cfg, indent=2))
     p = subprocess.Popen([sys.executable, str(HERE.parent / "scheduler.py"), str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -26,19 +29,19 @@ async def main():
             async def post(patch):
                 async with s.post(B + "/scheduler/config", headers=H, json={"patch": patch}) as r: return r.status, await r.json()
             j = await status()
-            check("budget is total memory minus the reserve", j["budget_gb"] == round(TOTAL - 10, 1), str(j["budget_gb"]))
+            check("budget is total memory minus the reserve", j["budget_gb"] == round(TOTAL - R1, 1), str(j["budget_gb"]))
             check("GPU limit is left alone when told so", j["gpu_limit"]["managed"] is False and j["gpu_limit"]["error"] is None)
             async with s.get(B + "/scheduler/config") as r: check("config needs the key", r.status == 401)
             async with s.get(B + "/scheduler/config", headers=H) as r: g = await r.json()
-            check("config is returned with order", g["order"] == list(cfg["resources"]) and g["config"]["system_reserve_gb"] == 10)
-            st, a = await post({"system_reserve_gb": 12, "resources": {"mid": {"memory_gb": 2, "keep_alive_s": 9, "title": "Middle"}}})
+            check("config is returned with order", g["order"] == list(cfg["resources"]) and g["config"]["system_reserve_gb"] == R1)
+            st, a = await post({"system_reserve_gb": R2, "resources": {"mid": {"memory_gb": 2, "keep_alive_s": 9, "title": "Middle"}}})
             j = await status(); disk = json.loads(path.read_text())
-            check("save applies at once", st == 200 and j["budget_gb"] == round(TOTAL - 12, 1) and j["resources"]["mid"]["memory_gb"] == 2
+            check("save applies at once", st == 200 and j["budget_gb"] == round(TOTAL - R2, 1) and j["resources"]["mid"]["memory_gb"] == 2
                   and j["resources"]["mid"]["keep_alive_s"] == 9 and j["resources"]["mid"]["title"] == "Middle", str(a))
-            check("save writes the file and keeps the rest", disk["system_reserve_gb"] == 12 and disk["resources"]["mid"]["cmd"] == cfg["resources"]["mid"]["cmd"]
+            check("save writes the file and keeps the rest", disk["system_reserve_gb"] == R2 and disk["resources"]["mid"]["cmd"] == cfg["resources"]["mid"]["cmd"]
                   and list(disk["resources"]) == list(cfg["resources"]))
             st, a = await post({"system_reserve_gb": 1})
-            check("too small a reserve is refused, file untouched", st == 400 and json.loads(path.read_text())["system_reserve_gb"] == 12, str(a)[:90])
+            check("too small a reserve is refused, file untouched", st == 400 and json.loads(path.read_text())["system_reserve_gb"] == R2, str(a)[:90])
             st, a = await post({"resources": {"mid": {"memory_gb": "lots"}}})
             check("bad value is refused", st == 400 and (await status())["resources"]["mid"]["memory_gb"] == 2)
             async with s.post(B + "/v1/chat/completions", headers=H, json={"model": "mid"}) as r: pass
